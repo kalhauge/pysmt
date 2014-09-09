@@ -4,6 +4,10 @@ import re
 from abc import abstractmethod
 from . import logic
 
+import logging 
+
+log = logging.getLogger('pysmt.solver')
+
 class UnsatisfiableTerm (Exception): pass
 
 class Solver:
@@ -76,9 +80,16 @@ class SMT2Solver (Solver):
         return solution
        
     def satisfy(self, term):
+        log.debug('Satisfing term')
         commands = self.commands(term)
         output = self.run_commands(commands)
-        return self.parse(output)
+        try:
+            solution = self.parse(output)
+            log.debug('Solution found')
+            return solution
+        except UnsatisfiableTerm:
+            log.debug('Solution NOT found')
+            raise
 
     @abstractmethod
     def run_commands(self, term):
@@ -105,5 +116,5 @@ def ensurefile(filename=None):
         import tempfile
         out = tempfile.NamedTemporaryFile("w+", suffix=".smt2", delete=False)
         filename = out.name
-        print(filename)
+        log.debug("Generated temporary file %r", filename)
     return filename, out
