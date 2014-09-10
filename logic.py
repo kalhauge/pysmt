@@ -9,6 +9,7 @@ This file descripes the fundamental partial order logic, as used in this module.
 
 import itertools
 
+from functools import partial
 from abc import abstractmethod
 from collections import namedtuple
 
@@ -24,8 +25,8 @@ class Literal(namedtuple('Literal', ['name', 'type_', 'value'])):
         used for traceability.
     """
 
-    @staticmethod
-    def literalize(value, type_):
+    @classmethod
+    def literalize(cls, type_, value):
         """
         Takes a value and makes it into a literal remembering the original
         value. If the value has a method called :meth:`rep`, this is called to
@@ -35,8 +36,7 @@ class Literal(namedtuple('Literal', ['name', 'type_', 'value'])):
         except AttributeError: 
             name = 'l' + hash(value)
 
-        return Literal(name, type_, value)
-
+        return cls(name, type_, value)
 
 class Term:
     """ A piece of logic """
@@ -44,6 +44,7 @@ class Term:
     @abstractmethod
     def literals(self):
         """ Returns the literals used in the term """
+
 
 class All(Term):
     """ 
@@ -63,6 +64,8 @@ class All(Term):
                 term.literals() for term in self.terms
             )
         )
+    
+        
 
 class Any(Term):
     """ 
@@ -97,6 +100,11 @@ class Order(Term):
 
     def literals(self):
         yield from self.ordered_literals
+    
+    @classmethod
+    def from_values(cls, type_, values):
+        return cls(map(partial(Literal.literalize, type_), values))
+        
 
 class Next(Term):
     """
@@ -110,6 +118,11 @@ class Next(Term):
 
     def literals(self):
         yield from (self.e1, self.e2)
+    
+    @classmethod
+    def from_values(cls, type_, e1, e2):
+        lit = partial(Literal.literalize, type_)
+        return cls(lit(e1), lit(e2))
 
 
 

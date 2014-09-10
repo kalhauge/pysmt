@@ -1,21 +1,34 @@
+"""
+Solver
+======
 
+.. currentmodule:: pysmt.solver
+.. moduleauthor:: Christian Kalhauge
+
+
+
+"""
+from abc import abstractmethod
 import re
 
-from abc import abstractmethod
+import logging 
+log = logging.getLogger('pysmt.solver')
+
 from . import logic
 
-import logging 
-
-log = logging.getLogger('pysmt.solver')
 
 class UnsatisfiableTerm (Exception): pass
 
 class Solver:
+    """
+    The top level solver of all the logic in :mod:`pysmt.logic`. 
+    """
    
     @abstractmethod 
     def satisfy(self, term):
-        """ Returns a dictionary with values satisfying the term or an
-        UnsatisfiableTerm exception
+        """ 
+        Returns a dictionary of values satisfying the term ordered by
+        the values of the litterals, or an :class:`UnsatisfiableTerm` exception.
         """
 
 class SMT2Solver (Solver):
@@ -34,7 +47,7 @@ class SMT2Solver (Solver):
             '(set-option :produce-models true)',
             '(set-logic {})'.format(self.logic)
         ] + [
-            '(declare-fun {0.name} () {0.type})'.format(literal) 
+            '(declare-fun {0.name} () {0.type_})'.format(literal) 
             for literal in literals 
         ] + [
             '(assert {})'.format(self.compile(term))
@@ -68,7 +81,7 @@ class SMT2Solver (Solver):
 
     def parse(self, output):
         if self.re_sat.match(output) is None:
-             raise UnsatisfiableTerm("Order not satitsfiable")
+             raise UnsatisfiableTerm(output)
     
         solution = {}
         for match in self.re_function.finditer(output):
@@ -84,8 +97,11 @@ class SMT2Solver (Solver):
         commands = self.commands(term)
         output = self.run_commands(commands)
         try:
-            solution = self.parse(output)
-            log.debug('Solution found')
+            mapping = self.parse(output)
+            solution = {}
+            for literal in term.literals():
+                solution[literal.value] = mapping[literal.name]
+            log.debug('Solution found, %s literals mapped', len(solution))
             return solution
         except UnsatisfiableTerm:
             log.debug('Solution NOT found')
@@ -94,7 +110,6 @@ class SMT2Solver (Solver):
     @abstractmethod
     def run_commands(self, term):
         """ Runs the commands and returns the output."""
-        
 
 class Yices (SMT2Solver):
 
