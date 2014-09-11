@@ -124,5 +124,14 @@ class Next(Term):
         lit = partial(Literal.literalize, type_)
         return cls(lit(e1), lit(e2))
 
+class Boolean(Term):
+    """
+    Eighter True or False, depending on the value.
+    """
 
+    def __init__(self, value):
+        self.value = value
+
+    def literals(self):
+        yield from []
 

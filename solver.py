@@ -74,6 +74,8 @@ class SMT2Solver (Solver):
             return '(< {})'.format(' '.join(l.name for l in term.literals()))
         elif isinstance(term, logic.Next):
             return '(= (+ {} 1) {})'.format(term.e1.name, term.e2.name)
+        elif isinstance(term, logic.Boolean):
+            return 'true' if term.value else 'false'
         else:
             raise NotImplementedError(
                 "Don't know how to handle {}.".format(term)
