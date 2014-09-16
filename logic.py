@@ -32,12 +32,11 @@ class Literal(namedtuple('Literal', ['name', 'type_', 'value'])):
         value. If the value has a method called :meth:`rep`, this is called to
         generate the solution, else a name is generated from the hash value.
         """ 
-        try:
-            literal = cls.literals[value]
-        except KeyError:
-            literal = cls(value._rep, type_, value)
-            cls.literals[value] = literal
+        literal = cls(value._rep, type_, value)
         return literal
+
+    def __str__(self):
+        return self.name
 
 class Term:
     """ A piece of logic """
@@ -62,7 +61,7 @@ class All(Term):
 
     def __init__(self, terms):
         self.terms = list(terms) 
-        assert len(self.terms) > 1
+        assert len(self.terms) > 1, '\n'.join(map(str, self.terms))
 
     def literals(self):
         yield from set(
@@ -117,6 +116,12 @@ class Order(tuple, Term):
     def size(self):
         return 1 + len(self)
 
+    def __repr__(self):
+        return "Order({})".format(super().__repr__())
+
+    def __str__(self):
+        return ' < '.join(map(str, self))
+
 class Next(Term):
     """
     A next term is true if the O(e1) + 1 = O(e2)
@@ -131,7 +136,7 @@ class Next(Term):
         yield from (self.e1, self.e2)
     
     @classmethod
-    def from_values(cls, type_, e1, e2):
+    def from_values(cls, e1, e2, type_='Int'):
         lit = partial(Literal.literalize, type_)
         return cls(lit(e1), lit(e2))
 
@@ -170,5 +175,6 @@ def any(terms):
     }.get(len(ts), Any)(ts)
 
 order = Order.from_values
+next = Next.from_values
 
 
