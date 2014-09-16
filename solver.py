@@ -33,11 +33,12 @@ class Solver:
 
 class SMT2Solver (Solver):
 
-    re_sat = re.compile('^sat$', re.MULTILINE)
+    re_return = re.compile('^(sat|unsat)$', re.MULTILINE)
     re_function = re.compile('\((?P<name>[^ \(\)]*) (?P<value>.*)\)')
     re_number = re.compile('(\(- (?P<minus>[0-9]+)\))|(?P<plus>[0-9]+)')
 
     def __init__(self, logic="QF_IDL"):
+        self.count = 0
         self.logic = logic 
     
     def commands(self, term, literals=None): 
@@ -59,6 +60,7 @@ class SMT2Solver (Solver):
         ]
 
     def compile(self, term, depth=0):
+        self.count += 1
         indent = ('\n' + ' ' * (4 * (depth + 1)))
         if isinstance(term, logic.All):
             return '(and {})'.format(
@@ -82,8 +84,11 @@ class SMT2Solver (Solver):
             )
 
     def parse(self, output):
-        if self.re_sat.match(output) is None:
-             raise UnsatisfiableTerm(output)
+        mo = self.re_return.match(output)
+        if mo is None:
+            raise Exception('Bad compiling, {}'.format(output))
+        elif mo.group(0) != 'sat':
+            raise UnsatisfiableTerm(output)
     
         solution = {}
         for match in self.re_function.finditer(output):
@@ -95,8 +100,9 @@ class SMT2Solver (Solver):
         return solution
        
     def satisfy(self, term):
-        log.debug('Satisfing term')
+        log.debug('Satisfing term of size %s', term.size())
         commands = self.commands(term)
+        self.count = 0
         output = self.run_commands(commands)
         try:
             mapping = self.parse(output)

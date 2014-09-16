@@ -24,7 +24,7 @@ class Literal(namedtuple('Literal', ['name', 'type_', 'value'])):
     :param str value: The value that is litteral is associated with. This is
         used for traceability.
     """
-
+    literals = {}
     @classmethod
     def literalize(cls, type_, value):
         """
@@ -32,11 +32,12 @@ class Literal(namedtuple('Literal', ['name', 'type_', 'value'])):
         value. If the value has a method called :meth:`rep`, this is called to
         generate the solution, else a name is generated from the hash value.
         """ 
-        try: name = value.rep()
-        except AttributeError: 
-            name = 'l' + hash(value)
-
-        return cls(name, type_, value)
+        try:
+            literal = cls.literals[value]
+        except KeyError:
+            literal = cls(value._rep, type_, value)
+            cls.literals[value] = literal
+        return literal
 
 class Term:
     """ A piece of logic """
@@ -45,6 +46,10 @@ class Term:
     def literals(self):
         """ Returns the literals used in the term """
 
+    @abstractmethod
+    def size(self):
+        """ Returns the size of the term, as in how many nodes in the term tree
+        """
 
 class All(Term):
     """ 
@@ -57,6 +62,7 @@ class All(Term):
 
     def __init__(self, terms):
         self.terms = list(terms) 
+        assert len(self.terms) > 1
 
     def literals(self):
         yield from set(
@@ -64,7 +70,9 @@ class All(Term):
                 term.literals() for term in self.terms
             )
         )
-    
+   
+    def size(self):
+        return 1 + sum(t.size() for t in self.terms) 
         
 
 class Any(Term):
@@ -78,6 +86,7 @@ class Any(Term):
 
     def __init__(self, terms):
         self.terms = list(terms)
+        assert len(self.terms) > 1
 
     def literals(self):
         yield from set(
@@ -85,8 +94,11 @@ class Any(Term):
                 term.literals() for term in self.terms
             )
         )
+   
+    def size(self):
+        return 1 + sum(t.size() for t in self.terms) 
 
-class Order(Term):
+class Order(tuple, Term):
     """ 
     All the literals must be ordered.
    
@@ -94,17 +106,16 @@ class Order(Term):
 
         The literals must be ordered and givven values from small to large.
     """
-    
-    def __init__(self, literals):
-        self.ordered_literals = list(literals)
-
+   
     def literals(self):
-        yield from self.ordered_literals
+        yield from self
     
     @classmethod
-    def from_values(cls, type_, values):
-        return cls(map(partial(Literal.literalize, type_), values))
-        
+    def from_values(cls, *values, type='Int'):
+        return cls(map(partial(Literal.literalize, type), values))
+  
+    def size(self):
+        return 1 + len(self)
 
 class Next(Term):
     """
@@ -124,6 +135,9 @@ class Next(Term):
         lit = partial(Literal.literalize, type_)
         return cls(lit(e1), lit(e2))
 
+    def size(self):
+        return 3
+
 class Boolean(Term):
     """
     Eighter True or False, depending on the value.
@@ -134,4 +148,27 @@ class Boolean(Term):
 
     def literals(self):
         yield from []
+
+    def size(self):
+        return 1
+
+true = Boolean(True)
+false = Boolean(False)
+
+def all(terms):
+    ts = list(terms)
+    return {
+        0 : lambda ts: true,
+        1 : lambda ts: ts[0]
+    }.get(len(ts), All)(ts)
+
+def any(terms):
+    ts = list(terms)
+    return {
+        0 : lambda ts: false,
+        1 : lambda ts: ts[0]
+    }.get(len(ts), Any)(ts)
+
+order = Order.from_values
+
 
