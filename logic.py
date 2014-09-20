@@ -143,6 +143,27 @@ class Next(Term):
     def size(self):
         return 3
 
+class Eq(Term):
+    """
+    A next term is true if the O(e1) = O(e2)
+
+    """
+    
+    def __init__(self, e1, e2):
+        self.e1 = e1
+        self.e2 = e2
+
+    def literals(self):
+        yield from (self.e1, self.e2)
+    
+    @classmethod
+    def from_values(cls, e1, e2, type_='Int'):
+        lit = partial(Literal.literalize, type_)
+        return cls(lit(e1), lit(e2))
+
+    def size(self):
+        return 3
+
 class Boolean(Term):
     """
     Eighter True or False, depending on the value.
@@ -156,6 +177,17 @@ class Boolean(Term):
 
     def size(self):
         return 1
+
+class Not(Term):
+
+    def __init__(self, subterm):
+        self.subterm = subterm
+
+    def literals(self):
+        yield from self.subterm.literals()
+
+    def size(self):
+        return 1 + self.subterm.size()
 
 true = Boolean(True)
 false = Boolean(False)
@@ -176,5 +208,7 @@ def any(terms):
 
 order = Order.from_values
 next = Next.from_values
+not_ = Not 
+eq = Eq.from_values
 
 

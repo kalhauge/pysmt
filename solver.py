@@ -51,6 +51,7 @@ class SMT2Solver (Solver):
             '(declare-fun {0.name} () {0.type_})'.format(literal) 
             for literal in literals 
         ] + [
+            #'(assert (!= {}))'.format(' '.join(l.name for l in literals)),
             '(assert {})'.format(self.compile(term))
         ] + [ 
             '(check-sat)',
@@ -78,6 +79,10 @@ class SMT2Solver (Solver):
             return '(= (+ {} 1) {})'.format(term.e1.name, term.e2.name)
         elif isinstance(term, logic.Boolean):
             return 'true' if term.value else 'false'
+        elif isinstance(term, logic.Not):
+            return '(not {})'.format(self.compile(term.subterm))
+        elif isinstance(term, logic.Eq):
+            return '(= {} {})'.format(term.e1.name, term.e2.name)
         else:
             raise NotImplementedError(
                 "Don't know how to handle {}.".format(term)
