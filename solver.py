@@ -94,22 +94,24 @@ class SMT2Solver (Solver):
             raise Exception('Bad compiling, {}'.format(output))
         elif mo.group(0) != 'sat':
             raise UnsatisfiableTerm(output)
-    
+
         solution = {}
         for match in self.re_function.finditer(output):
-            value = match.group('value')
+            value, name = match.group('value', 'name')
+            if name == 'error':
+                raise Exception(value)
             d = self.re_number.match(value).groupdict()
             value = -int(d['minus']) if d['minus'] else int(d['plus'])
             solution[match.group('name')] = value
 
         return solution
-       
+
     def satisfy(self, term):
         log.debug('Satisfing term of size %s', term.size())
         commands = self.commands(term)
         self.count = 0
-        output = self.run_commands(commands)
         try:
+            cmd, output = self.run_commands(commands)
             mapping = self.parse(output)
             solution = {}
             for literal in term.literals():
@@ -118,6 +120,9 @@ class SMT2Solver (Solver):
             return solution
         except UnsatisfiableTerm:
             log.debug('Solution NOT found')
+            raise
+        except Exception:
+            log.error('Something technical happend while executing %s', cmd)
             raise
 
     @abstractmethod
@@ -132,8 +137,8 @@ class Yices (SMT2Solver):
         with out:
             for command in commands:
                 print(command, file=out)
-        return check_output(
-            ['yices-smt2', filename], 
+        return ['yices-smt2', filename], check_output(
+            ['yices-smt2', filename],
             universal_newlines=True
         )
 
