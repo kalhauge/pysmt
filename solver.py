@@ -49,7 +49,7 @@ class SMT2Solver (Solver):
             '(set-logic {})'.format(self.logic)
         ] + [
             '(declare-fun {0.name} () {0.type_})'.format(literal) 
-            for literal in literals 
+            for literal in literals  # sorted(literals, key=lambda x:x.name)
         ] + [
             #'(assert (!= {}))'.format(' '.join(l.name for l in literals)),
             '(assert {})'.format(self.compile(term))
@@ -121,8 +121,12 @@ class SMT2Solver (Solver):
         except UnsatisfiableTerm:
             log.debug('Solution NOT found')
             raise
-        except Exception:
-            log.error('Something technical happend while executing %s', cmd)
+        except CalledProcessError as e:
+            log.error('CalledProcessError: %s', e.cmd)
+            log.error(e.output)
+            raise
+        except Exception as e:
+            log.error(e)
             raise
 
     @abstractmethod
