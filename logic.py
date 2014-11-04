@@ -13,37 +13,15 @@ from functools import partial
 from abc import abstractmethod
 from collections import namedtuple
 
-class Literal(namedtuple('Literal', ['name', 'type_', 'value'])):
-    """
-    A litteral is the values that we want to solve. The standart of this
-    literals are that they have to fulfill the SMTLIB specs, this means that the
-    name and the type_ must be according to thier specifications.
+from .arithmetic import Symbol
 
-    :param str name: The name of the litteral.
-    :param str type_: The type of the literal described by a string.
-    :param str value: The value that is litteral is associated with. This is
-        used for traceability.
-    """
-    literals = {}
-    @classmethod
-    def literalize(cls, type_, value):
-        """
-        Takes a value and makes it into a literal remembering the original
-        value. If the value has a method called :meth:`rep`, this is called to
-        generate the solution, else a name is generated from the hash value.
-        """ 
-        literal = cls(value._rep, type_, value)
-        return literal
-
-    def __str__(self):
-        return self.name
 
 class Term:
     """ A piece of logic """
 
     @abstractmethod
-    def literals(self):
-        """ Returns the literals used in the term """
+    def symbols(self):
+        """ Returns the symbols used in the term """
 
     @abstractmethod
     def size(self):
@@ -63,10 +41,10 @@ class All(Term):
         self.terms = list(terms) 
         assert len(self.terms) > 1, '\n'.join(map(str, self.terms))
 
-    def literals(self):
+    def symbols(self):
         yield from set(
             itertools.chain.from_iterable(
-                term.literals() for term in self.terms
+                term.symbols() for term in self.terms
             )
         )
    
@@ -87,10 +65,10 @@ class Any(Term):
         self.terms = list(terms)
         assert len(self.terms) > 1
 
-    def literals(self):
+    def symbols(self):
         yield from set(
             itertools.chain.from_iterable(
-                term.literals() for term in self.terms
+                term.symbols() for term in self.terms
             )
         )
    
@@ -99,22 +77,26 @@ class Any(Term):
 
 class Order(tuple, Term):
     """ 
-    All the literals must be ordered.
+    All the symbols must be ordered.
    
-    .. attribute:: ordered_literals
+    .. attribute:: ordered_symbols
 
-        The literals must be ordered and givven values from small to large.
+        The symbols must be ordered and givven values from small to large.
     """
    
-    def literals(self):
-        yield from self
+    def symbols(self):
+        yield from set(
+            itertools.chain.from_iterable(
+                expr.symbols() for expr in self
+            )
+        )
     
     @classmethod
     def from_values(cls, *values, type='Int'):
-        return cls(map(partial(Literal.literalize, type), values))
+        return cls(map(partial(Symbol.from_value, type), values))
   
     def size(self):
-        return 1 + len(self)
+        return 1 + sum(exp.size() for exp in self)
 
     def __repr__(self):
         return "Order({})".format(super().__repr__())
@@ -132,12 +114,17 @@ class Next(Term):
         self.e1 = e1
         self.e2 = e2
 
-    def literals(self):
-        yield from (self.e1, self.e2)
+    def symbols(self):
+        yield from set(
+            itertools.chain(
+                self.e1.symbols(),
+                self.e2.symbols()
+            )
+         )
     
     @classmethod
     def from_values(cls, e1, e2, type_='Int'):
-        lit = partial(Literal.literalize, type_)
+        lit = partial(Symbol.from_value, type_)
         return cls(lit(e1), lit(e2))
 
     def size(self):
@@ -153,12 +140,12 @@ class Eq(Term):
         self.e1 = e1
         self.e2 = e2
 
-    def literals(self):
+    def symbols(self):
         yield from (self.e1, self.e2)
     
     @classmethod
     def from_values(cls, e1, e2, type_='Int'):
-        lit = partial(Literal.literalize, type_)
+        lit = partial(Symbol.from_value, type_)
         return cls(lit(e1), lit(e2))
 
     def size(self):
@@ -172,7 +159,7 @@ class Boolean(Term):
     def __init__(self, value):
         self.value = value
 
-    def literals(self):
+    def symbols(self):
         yield from []
 
     def size(self):
@@ -183,8 +170,8 @@ class Not(Term):
     def __init__(self, subterm):
         self.subterm = subterm
 
-    def literals(self):
-        yield from self.subterm.literals()
+    def symbols(self):
+        yield from self.subterm.symbols()
 
     def size(self):
         return 1 + self.subterm.size()

@@ -18,6 +18,9 @@ import logging
 log = logging.getLogger('pysmt.solver')
 
 from . import logic
+from . import arithmetic
+
+DEBUG = True
 
 
 class UnsatisfiableTerm (Exception): pass
@@ -31,7 +34,7 @@ class Solver:
     def satisfy(self, term):
         """ 
         Returns a dictionary of values satisfying the term ordered by
-        the values of the literals, or an :class:`UnsatisfiableTerm` exception.
+        the values of the symbols, or an :class:`UnsatisfiableTerm` exception.
         """
 
 class SMT2Solver (Solver):
@@ -59,22 +62,22 @@ class SMT2Solver (Solver):
         world.
         """
         log.debug('Starting solveing terms using a context of size %s', context.size())
-        literals = set(context.literals())
+        symbols = set(context.symbols())
         with self.open():
             self.preable()
-            self.declare_functions(literals)
+            self.declare_functions(symbols)
             self.assert_term(context)
             for term in terms:
                 log.debug('Solving Term of size %s.', term.size())
-                term_literals = set(term.literals())
+                term_symbols = set(term.symbols())
                 self.send(['(push 1)'])
-                self.declare_functions(term_literals - literals)
+                self.declare_functions(term_symbols - symbols)
                 self.assert_term(term)
                 satisfied = self.has_solution()
                 log.debug('Solution %s.', 'found' if satisfied else 'not found')
                 if solutions:
                     if satisfied:
-                        yield self.get_solution(literals | term_literals)
+                        yield self.get_solution(symbols | term_symbols)
                     else:
                         yield None
                 else:
@@ -83,15 +86,15 @@ class SMT2Solver (Solver):
 
     def satisfy(self, term):
         log.debug('Satisfing term of size %s', term.size())
-        literals = set(term.literals())
+        symbols = set(term.symbols())
         with self.open():
             self.preable()
-            self.declare_functions(literals)
+            self.declare_functions(symbols)
             self.assert_term(term)
             satisfied = self.has_solution()
             log.debug('Solution %s.', 'found' if satisfied else 'not found')
             if satisfied:
-                return self.get_solution(literals)
+                return self.get_solution(symbols)
             else:
                 raise UnsatisfiableTerm()
 
@@ -106,19 +109,19 @@ class SMT2Solver (Solver):
             '(set-logic {})'.format(self.logic)
         ])
         
-    def declare_functions(self, literals):
+    def declare_functions(self, symbols):
         self.send([
             '(declare-fun {0.name} () {0.type_})'.format(literal) 
-            for literal in literals  # sorted(literals, key=lambda x:x.name)
+            for literal in symbols  # sorted(symbols, key=lambda x:x.name)
         ])
 
     def assert_term(self, term):
         self.send([ '(assert {})'.format(self.compile(term)) ])
 
-    def get_solution(self, literals):
+    def get_solution(self, symbols):
         self.send([
             '(get-value ({}))'.format(
-                ' '.join(literal.name for literal in literals)
+                ' '.join(literal.name for literal in symbols)
         )])
         output = self.recv(self.re_solution)
         mapping = {}
@@ -131,7 +134,7 @@ class SMT2Solver (Solver):
             mapping[match.group('name')] = value
 
         solution = {}
-        for literal in literals:
+        for literal in symbols:
             solution[literal.value] = mapping[literal.name]
 
         return solution
@@ -149,19 +152,38 @@ class SMT2Solver (Solver):
                     indent + self.compile(t, depth=depth+1) for t in term.terms
                 ))
         elif isinstance(term, logic.Order):
-            return '(< {})'.format(' '.join(l.name for l in term.literals()))
+            return '(< {})'.format(' '.join(
+                self.compile_arithmetic(a, depth=depth+1) 
+                for a in term)
+            )
         elif isinstance(term, logic.Next):
-            return '(= (+ {} 1) {})'.format(term.e1.name, term.e2.name)
+            return '(= (+ {} 1) {})'.format(
+                self.compile_arithmetic(term.e1, depth=depth+1), 
+                self.compile_arithmetic(term.e2, depth=depth+1)
+            )
         elif isinstance(term, logic.Boolean):
             return 'true' if term.value else 'false'
         elif isinstance(term, logic.Not):
             return '(not {})'.format(self.compile(term.subterm))
         elif isinstance(term, logic.Eq):
-            return '(= {} {})'.format(term.e1.name, term.e2.name)
+            return '(= {} {})'.format(
+                self.compile_arithmetic(term.e1, depth=depth+1), 
+                self.compile_arithmetic(term.e2, depth=depth+1)
+            )
         else:
             raise NotImplementedError(
                 "Don't know how to handle {}.".format(term)
             )
+
+    def compile_arithmetic(self, arithm, depth):
+        indent = ('\n' + ' ' * (4 * (depth + 1)))
+        if isinstance(arithm, arithmetic.Symbol):
+            return arithm.name
+        else:
+            raise NotImplementedError(
+                "Don't know how to handle {}.".format(term)
+            )
+
 
 
     def has_solution(self):
@@ -204,7 +226,7 @@ class Yices (SMT2Solver):
 
     def send(self, commands):
         for command in commands:
-            print(command, file=self.tmpfile)
+            if DEBUG: print(command, file=self.tmpfile)
             print(command, file=self.process.stdin)
         self.process.stdin.flush()
 
@@ -217,7 +239,6 @@ class Yices (SMT2Solver):
             if counter <= 0:
                 break        
              
-            ## match = re.search(self.readbuffer, pos=self.index)
         match = self.readbuffer[self.index:]
         self.index = len(self.readbuffer) ## match.end(0)
         search = re.search(match).group(0)
@@ -226,7 +247,7 @@ class Yices (SMT2Solver):
     def open(self):
         self.index = 0
         self.readbuffer = ''
-        filename, self.tmpfile = ensurefile()
+        if DEBUG: filename, self.tmpfile = ensurefile()
         self.process = Popen(
             ['yices-smt2','--incremental'],
             universal_newlines=True,
@@ -243,7 +264,7 @@ class Yices (SMT2Solver):
         if self.is_open(): 
             self.process.stdin.close()
             self.process.terminate()
-            self.tmpfile.close()
+            if DEBUG: self.tmpfile.close()
             self.process = None
 
 def ensurefile(filename=None):

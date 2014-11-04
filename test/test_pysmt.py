@@ -1,8 +1,10 @@
-
 import pysmt 
 import itertools
 
+import logging
+
 solver = pysmt.solver.Yices('QF_IDL')
+logging.basicConfig(level=logging.DEBUG)
 
 class Test():
     
@@ -10,16 +12,19 @@ class Test():
         self.id = id
    
     @property 
-    def _rep(self):
+    def symbol(self):
         return 't' + str(self.id)
 
     def __repr__(self):
-        return self._rep
+        return self.symbol
 
 def test_yices_statisfy():
     t1, t2 = Test(0), Test(1)
     solution = solver.satisfy(pysmt.logic.order(t1,t2))
     assert solution[t1] < solution[t2]
+    
+    solution = solver.satisfy(pysmt.logic.order(t2,t1))
+    assert solution[t2] < solution[t1]
 
 def test_yices_statifiable():
     t1, t2, t3 = Test(1), Test(2), Test(3)
