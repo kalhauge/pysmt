@@ -17,7 +17,6 @@ import time
 import logging 
 log = logging.getLogger('pysmt.solver')
 
-from . import logic
 from . import arithmetic
 
 DEBUG = True
@@ -27,7 +26,6 @@ class UnsatisfiableTerm (Exception): pass
 
 class Solver:
     """
-    The top level solver of all the logic in :mod:`pysmt.logic`. 
     """
    
     @abstractmethod 
