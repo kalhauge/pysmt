@@ -40,7 +40,6 @@ next = lambda fst, snd: eq(add(fst, 1), snd)
 
 function = DynamicOperator.from_values
 
-
 true = Value.from_value(True)
 false = Value.from_value(False)
 

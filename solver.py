@@ -117,6 +117,7 @@ class SMT2Solver (Solver):
         self.send([ '(assert {})'.format(self.compile(term)) ])
 
     def get_solution(self, symbols):
+        if not symbols: return {}
         self.send([
             '(get-value ({}))'.format(
                 ' '.join(literal.name for literal in symbols)

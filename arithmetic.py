@@ -83,18 +83,26 @@ class Operator(Expression):
             self.smt2_opr, 
             sep + sep.join(t.compile_smt2(depth + 1) for t in self.args)
         )
-    
+
+    def __str__(self):
+        return '({} {})'.format(
+            self.smt2_opr, ' '.join(str(a) for a in self.args)
+        )
     
 class DynamicOperator(Operator):
 
     def __init__(self, name, default, *args):
-        super().__init__(args)
+        super().__init__(*args)
         self.name = name
         self.opr = lambda *args: default
+        self.smt2_opr = self.name
 
     @classmethod 
     def from_values(cls, name, default, *args):
         return cls(name, default, *list(map(from_value, args)))
+
+    def compile_smt2(self, depth=0):
+        return Value.from_value(self.opr(*self.args)).compile_smt2()
     
 
 class All(Operator):
@@ -213,6 +221,9 @@ class Value(Expression):
         else:
             return str(self.value)
 
+    def __str__(self):
+        return self.compile_smt2()
+
 class Memory(Expression):
 
     def __init__(self, name):
@@ -229,6 +240,9 @@ class Memory(Expression):
 
     def compile_smt2(self, depth=0):
         raise NotImplementedError('Can not compile to smt2')
+
+    def __str__(self):
+        return '(mem {})'.format(self.name)
 
 class Symbol(Expression):
     """
@@ -281,10 +295,6 @@ class Symbol(Expression):
     def __hash__(self):
         return hash(self.name)
 
-    def __str__(self):
+    def __repr__(self):
         return self.name
-
-
-
-
 
