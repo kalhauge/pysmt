@@ -1,4 +1,7 @@
 import pysmt 
+
+import pytest
+
 import itertools
 
 import logging
@@ -68,3 +71,64 @@ def test_yices_filter():
         (t1, t2),
         (t2, t1),
     ])
+
+TREES = {
+    'simple' : pysmt.add(1, 3),
+    'symbolic' : pysmt.Symbol('s1', 'Int', None),
+    'combined' : pysmt.sub(pysmt.add(1, 4), pysmt.add(1, 1)), # (1 + 4) - 3
+    'symbolic_combined' : pysmt.sub(
+        pysmt.Symbol('s1', 'Int', None), 
+        pysmt.add(1, 1),
+    ), 
+}
+
+@pytest.fixture(params=TREES)
+def tree_name(request):
+    return request.param
+
+@pytest.fixture
+def tree(tree_name):
+    return TREES[tree_name] 
+
+def test_evaluation_tree(tree):
+    assert isinstance(tree, pysmt.Expression)
+
+def test_evaluation_inequality(tree):
+    assert tree != pysmt.add(23, 42)
+
+def test_evaluation_tree_evaulate(tree, tree_name):
+    assert tree.eval({'s1':10, 's2':1}) == dict(
+        simple=4,
+        symbolic=10,
+        combined=3,
+        symbolic_combined=8,
+    ).get(tree_name)
+
+def test_evaluation_tree_evaulate_with_values(tree, tree_name):
+    assert tree.eval({'s1':0, 's2':1}) == dict(
+        simple=4,
+        symbolic=0,
+        combined=3,
+        symbolic_combined=-2,
+    ).get(tree_name)
+
+def _test_evaluation_tree_reduce(tree, tree_name):
+    assert tree.reduce() == dict(
+        simple=C.Value(4),
+        symbolic=C.Symbol(1, 10),
+        combined=C.Value(3),
+        symbolic_combined=C.SymbolicBinaryExpr(
+            operator.sub, C.Symbol(1, 10), 2
+        ),
+        logic=C.SymbolicBinaryExpr(
+            operator.lt,
+            C.Symbol(1, 20),
+            2
+        ),
+        symbolic_logic=C.SymbolicBinaryExpr(
+            operator.lt, 
+            C.Symbol(1, 10), 
+            C.Symbol(2, -10), 
+        ),
+    ).get(tree_name)
+

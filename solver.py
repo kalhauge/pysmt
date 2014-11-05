@@ -140,51 +140,7 @@ class SMT2Solver (Solver):
         return solution
 
     def compile(self, term, depth=0):
-        indent = ('\n' + ' ' * (4 * (depth + 1)))
-        if isinstance(term, logic.All):
-            return '(and {})'.format(
-                ''.join(
-                    indent + self.compile(t, depth=depth+1) for t in term.terms
-                ))
-        elif isinstance(term, logic.Any):
-            return '(or {})'.format(
-                ''.join(
-                    indent + self.compile(t, depth=depth+1) for t in term.terms
-                ))
-        elif isinstance(term, logic.Order):
-            return '(< {})'.format(' '.join(
-                self.compile_arithmetic(a, depth=depth+1) 
-                for a in term)
-            )
-        elif isinstance(term, logic.Next):
-            return '(= (+ {} 1) {})'.format(
-                self.compile_arithmetic(term.e1, depth=depth+1), 
-                self.compile_arithmetic(term.e2, depth=depth+1)
-            )
-        elif isinstance(term, logic.Boolean):
-            return 'true' if term.value else 'false'
-        elif isinstance(term, logic.Not):
-            return '(not {})'.format(self.compile(term.subterm))
-        elif isinstance(term, logic.Eq):
-            return '(= {} {})'.format(
-                self.compile_arithmetic(term.e1, depth=depth+1), 
-                self.compile_arithmetic(term.e2, depth=depth+1)
-            )
-        else:
-            raise NotImplementedError(
-                "Don't know how to handle {}.".format(term)
-            )
-
-    def compile_arithmetic(self, arithm, depth):
-        indent = ('\n' + ' ' * (4 * (depth + 1)))
-        if isinstance(arithm, arithmetic.Symbol):
-            return arithm.name
-        else:
-            raise NotImplementedError(
-                "Don't know how to handle {}.".format(term)
-            )
-
-
+        return term.compile_smt2()
 
     def has_solution(self):
         self.send(['(check-sat)'])
