@@ -7,12 +7,25 @@ are.
 
 """ 
 import operator
+import itertools
+from functools import partial
 from abc import abstractmethod
 
 def pairwise(iterable):
     a, b = tee(iterable)
     next(b, None)
     return zip(a, b)
+
+def from_value(value):
+    if isinstance(value, Expression):
+        return value
+    elif hasattr(value, 'symbol'):
+        return Symbol.from_value('Int', value)
+    else:
+        try:
+            return Value.from_value(value)
+        except TypeError:
+            return Memory(value)
 
 class Expression:
     """ A piece of artihmetic, can return anything. """
@@ -32,6 +45,10 @@ class Expression:
 
     def __eq__(self, other):
         return vars(self) == vars(other)
+    
+    def __hash__(self):
+        vs = vars(self)
+        return hash(tuple((key, vs[key]) for key in sorted(vs)))
 
 class Operator(Expression):
     """ An operator could be anything from a function, to a unaryoperater like
@@ -45,7 +62,7 @@ class Operator(Expression):
 
     def symbols(self):
         yield from set( 
-            itertools.chain.form_iterable(
+            itertools.chain.from_iterable(
                 arg.symbols() for arg in self.args
             )
         )
@@ -56,32 +73,29 @@ class Operator(Expression):
     @classmethod
     def from_values(cls, *args):
         """ Method that indicates that free values might exist """ 
-        internal = []
-        for arg in args:
-            if isinstance(v, Expression):
-                value = arg
-            if hasattr(v, 'symbol'):
-                value = Symbol.form_value(arg)
-            else:
-                value = Value.from_value(arg)
-            internal.append(value)
-        return cls(*internal)
+        return cls(*list(map(from_value, args)))
 
     def compile_smt2(self, depth=0):
         sep = ' '
-        if len(args) > 2: sep = '\n' + ' '*(4*(depth + 1))
-        '({}{})'.format(
+        if len(self.args) > 2: sep = '\n' + ' '*(4*(depth + 1))
+        
+        return '({}{})'.format(
             self.smt2_opr, 
-            sep + sep.join(t.comile(depth + 1) for t in self.args)
+            sep + sep.join(t.compile_smt2(depth + 1) for t in self.args)
         )
-
-
+    
+    
 class DynamicOperator(Operator):
 
-    def __init__(self, name, *args, default=None):
+    def __init__(self, name, default, *args):
         super().__init__(args)
         self.name = name
         self.opr = lambda *args: default
+
+    @classmethod 
+    def from_values(cls, name, default, *args):
+        return cls(name, default, *list(map(from_value, args)))
+    
 
 class All(Operator):
     opr = all
@@ -89,7 +103,7 @@ class All(Operator):
 
 class Any(Operator):
     opr = any
-    smt2_opr = 'any'
+    smt2_opr = 'or'
 
 class Order(Operator):
     opr = lambda *args: all(a < b for a, b in pairwise(args))
@@ -179,7 +193,10 @@ class Value(Expression):
     @classmethod 
     def from_value(cls, value):
         lookup = {int: 'Int', bool: 'Bool'}
-        return cls(lookup[type(value)], value) 
+        try:
+            return cls(lookup[type(value)], value) 
+        except KeyError:
+            raise TypeError('{} not supported by pysmt.Value'.format(value))
 
     def eval(self, inputs={}):
         return self.value
@@ -190,9 +207,28 @@ class Value(Expression):
     def size(self):
         return 1
 
-    def compile_smt2(self, depth):
-        return str(value)
-    
+    def compile_smt2(self, depth=0):
+        if self.type_ == 'Bool':
+            return 'true' if self.value else 'false'
+        else:
+            return str(self.value)
+
+class Memory(Expression):
+
+    def __init__(self, name):
+        self.name = name
+
+    def eval(self, inputs={}):
+        return self.name
+
+    def symbols(self):
+        yield from []
+
+    def size(self):
+        return 1
+
+    def compile_smt2(self, depth=0):
+        raise NotImplementedError('Can not compile to smt2')
 
 class Symbol(Expression):
     """
