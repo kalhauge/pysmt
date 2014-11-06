@@ -19,8 +19,7 @@ log = logging.getLogger('pysmt.solver')
 
 from . import arithmetic
 
-DEBUG = True
-
+DEBUG = False
 
 class UnsatisfiableTerm (Exception): pass
 

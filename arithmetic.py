@@ -27,48 +27,76 @@ def from_value(value):
         except TypeError:
             return Memory(value)
 
+def transverse(root):
+    stack = [root]
+    while stack:
+        top = stack.pop()
+        try:
+            stack.extend(top.attributes())
+        except AttributeError: pass
+        yield top 
+
+
 class Expression:
     """ A piece of artihmetic, can return anything. """
 
-    @abstractmethod
     def symbols(self):
         """ Returns the symbols used in the expression """
+        symbols = set()
+        for expr in self.subexpressions():
+            if isinstance(expr, Symbol) and not expr in symbols:
+                symbols.add(expr)
+                yield expr
 
-    @abstractmethod
     def size(self):
         """ Returns the size of the expression, as in how many nodes in the
         experssion tree """
+        return sum(1 for x in self.subexpressions())
 
     @abstractmethod
     def eval(self, inputs={}):
         """ Evaluates the expression """
 
-    def __eq__(self, other):
-        return vars(self) == vars(other)
-    
-    def __hash__(self):
+    def iter_all(self):
+        """ Iteratest though the entier tree in the samme order each time, in a
+        depbth first mannor, only yielding all nodes and leafs """
+        yield from transverse(self)
+
+    def attributes(self):
         vs = vars(self)
-        return hash(tuple((key, vs[key]) for key in sorted(vs)))
+        return (vs[x] for x in sorted(vs) if x[0] != '_')
+
+    def subexpressions(self):
+        yield from filter(lambda a: isinstance(a, Expression), self.iter_all())
+    
+    def subcontent(self):
+        yield from filter(lambda a: not isinstance(a, Expression), self.iter_all())
+
+    def __eq__(self, other):
+        return (
+            isinstance(other, Expression) and
+            hash(self) == hash(other) and
+            all(a == b for a, b in zip(self.subcontent(), other.subcontent()))
+        )
 
 class Operator(Expression):
     """ An operator could be anything from a function, to a unaryoperater like
     not"""
 
     def __init__(self, *args):
-        self.args = tuple(args)
+        self._args = tuple(args)
+        self._hash = hash(args)
+
+    @property
+    def args(self):
+        return self._args
+
+    def attributes(self):
+        yield from super().attributes()
+        yield from self._args 
 
     def eval(self, inputs={}):
         return self.opr(*[arg.eval(inputs) for arg in self.args])
-
-    def symbols(self):
-        yield from set( 
-            itertools.chain.from_iterable(
-                arg.symbols() for arg in self.args
-            )
-        )
-
-    def size(self):
-        return sum(arg.size() for arg in self.args) + 1
 
     @classmethod
     def from_values(cls, *args):
@@ -88,6 +116,10 @@ class Operator(Expression):
         return '({} {})'.format(
             self.smt2_opr, ' '.join(str(a) for a in self.args)
         )
+    
+    def __hash__(self):
+        return self._hash
+
     
 class DynamicOperator(Operator):
 
@@ -209,12 +241,6 @@ class Value(Expression):
     def eval(self, inputs={}):
         return self.value
     
-    def symbols(self):
-        yield from []
-
-    def size(self):
-        return 1
-
     def compile_smt2(self, depth=0):
         if self.type_ == 'Bool':
             return 'true' if self.value else 'false'
@@ -224,6 +250,9 @@ class Value(Expression):
     def __str__(self):
         return self.compile_smt2()
 
+    def __hash__(self):
+        return hash((self.type_, self.value))
+
 class Memory(Expression):
 
     def __init__(self, name):
@@ -231,18 +260,15 @@ class Memory(Expression):
 
     def eval(self, inputs={}):
         return self.name
-
-    def symbols(self):
-        yield from []
-
-    def size(self):
-        return 1
-
+    
     def compile_smt2(self, depth=0):
         raise NotImplementedError('Can not compile to smt2')
 
     def __str__(self):
         return '(mem {})'.format(self.name)
+
+    def __hash__(self):
+        return hash(self.name)
 
 class Symbol(Expression):
     """
@@ -280,12 +306,6 @@ class Symbol(Expression):
         except KeyError:
             return value
 
-    def symbols(self):
-        yield self
-
-    def size(self):
-        return 1
-    
     def compile_smt2(self, depth):
         return self.name
 
@@ -295,6 +315,6 @@ class Symbol(Expression):
     def __hash__(self):
         return hash(self.name)
 
-    def __repr__(self):
+    def __str__(self):
         return self.name
 
