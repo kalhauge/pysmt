@@ -79,6 +79,9 @@ class Expression:
             all(a == b for a, b in zip(self.subcontent(), other.subcontent()))
         )
 
+    def simplify(self):
+        return self
+
 class Operator(Expression):
     """ An operator could be anything from a function, to a unaryoperater like
     not"""
@@ -162,6 +165,13 @@ class UnaryOperator(Operator):
 class Not(UnaryOperator):
     opr = operator.not_
     smt2_opr = 'not'
+
+    def simplify(self):
+        if isinstance(self.value, Not):
+            return self.value.value.simplify()
+        else:
+            return self
+          
 
 class BinaryOperator(Operator):
     """ A binary operator """
