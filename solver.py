@@ -19,7 +19,7 @@ log = logging.getLogger('pysmt.solver')
 
 from . import arithmetic
 
-DEBUG = False
+DEBUG = True
 
 class UnsatisfiableTerm (Exception): pass
 
@@ -169,15 +169,16 @@ class SMT2Solver (Solver):
     def close(self):
         """ Closes the solver """
 
-class Yices (SMT2Solver):
+class InteractiveSMT2Solver (SMT2Solver):
 
-    def __init__(self, mode='QF_IDL'):
+    def __init__(self, cmd, mode):
         self.process = None
         self.tempfile = None
+        self.cmd = cmd
         self.readbuffer = ''
         self.index = 0
         super().__init__(mode)
-
+    
     def send(self, commands):
         for command in commands:
             if DEBUG: print(command, file=self.tmpfile)
@@ -203,7 +204,7 @@ class Yices (SMT2Solver):
         self.readbuffer = ''
         if DEBUG: filename, self.tmpfile = ensurefile()
         self.process = Popen(
-            ['yices-smt2','--incremental'],
+            self.cmd,
             universal_newlines=True,
             stdout=PIPE,
             stderr=STDOUT,
@@ -220,6 +221,21 @@ class Yices (SMT2Solver):
             self.process.terminate()
             if DEBUG: self.tmpfile.close()
             self.process = None
+
+
+class Yices (InteractiveSMT2Solver):
+
+    def __init__(self, mode='QF_IDL'):
+        super().__init__(
+            ['yices-smt2','--incremental'],
+            mode)
+
+class Boolector (InteractiveSMT2Solver):
+    
+    def __init__(self, mode='QF_NIA'):
+        super().__init__(['boolector'], mode)
+
+
 
 def ensurefile(filename=None):
     if filename: 
