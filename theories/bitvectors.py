@@ -2,13 +2,19 @@
 This files contains the bitvektor system of smt
 """
 
-from .expression import Expression, Operator, BinaryOperator, UnaryOperator, Type
+from pysmt.expression import Expression, Operator, BinaryOperator, UnaryOperator, Type
 
 class BitVec (Type):
     
-    def __init__(self, size):
-        self.size = size
-
+    def __new__(cls, size):
+        if not hasattr(cls, '_instances'):
+            cls._instances = dict()
+        if not size in cls._instances:
+            instance = super().__new__(cls, size)
+            cls._instances[size] = instance
+            instance.size = size
+        return cls._instances[size]
+    
     def compile_smt2(self):
         return "(_ BitVec {})".format(self)
 
@@ -21,7 +27,7 @@ class BitVec (Type):
             return '#x{{{0}}}'.format(formating).format(value)
 
 
-class Concat(BinaryOperator):
+class Concat (BinaryOperator):
     smt2_opr = 'concat'
 
 class And (BinaryOperator):
@@ -51,11 +57,15 @@ class Lshr (BinaryOperator):
 class Ult (BinaryOperator):
    smt2_opr='bvult'
 
-class Not(UnaryOperator):
+class Not (UnaryOperator):
     smt2_opr = 'bvnot'
 
-class Neg(UnaryOperator):
+class Neg (UnaryOperator):
     smt2_opr = 'bvneg'
+
+class Eq (BinaryOperator):
+    opr = operator.eq
+    smt2_opr = '='
 
 def test_present():
     bv = BitVec(8)
