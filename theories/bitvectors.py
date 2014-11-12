@@ -67,11 +67,14 @@ class Lshr (BinaryOperator):
 class Slt (BinaryOperator):
     smt2_opr='bvslt'
 
-class Sge (BinaryOperator):
-    smt2_opr='bvsge'
-
 class Sle (BinaryOperator):
     smt2_opr='bvsle'
+
+class Sgt (BinaryOperator):
+    smt2_opr='bvsgt'
+
+class Sge (BinaryOperator):
+    smt2_opr='bvsge'
 
 class Not (UnaryOperator):
     smt2_opr = 'bvnot'
