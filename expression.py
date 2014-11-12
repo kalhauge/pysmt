@@ -8,8 +8,7 @@ def transverse(root):
     stack = [root]
     while stack:
         top = stack.pop()
-        try:
-            stack.extend(top.attributes())
+        try: stack.extend(top.attributes())
         except AttributeError: pass
         yield top 
 
@@ -37,9 +36,12 @@ class Type:
         """ Persents a value in the right format """
 
     @abstractmethod
+    def parse_value(self, string):
+        """Parses a value"""
+        raise NotImplementedError
+
     def get_value(self, value):
         return Value(self, value)
-
 
 class Expression:
     """ A piece of artihmetic, can return anything. """
@@ -176,7 +178,7 @@ class Value(Expression):
         return self.type_.present_smt2(self.value)
 
     def __str__(self):
-        return str(self.value)
+        return self.compile_smt2() 
 
     def __hash__(self):
         return hash((self.type_, self.value))

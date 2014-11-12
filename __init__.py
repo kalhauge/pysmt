@@ -3,7 +3,7 @@ from .theories import ints, core
 from .solver import *
 from .expression import *
 
-not_ = core.Not.from_values
+not_ = lambda x: core.Not.from_values(x).simplify()
 
 add = ints.Add.from_values
 sub = ints.Sub.from_values

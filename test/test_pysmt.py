@@ -132,3 +132,13 @@ def _test_evaluation_tree_reduce(tree, tree_name):
         ),
     ).get(tree_name)
 
+
+def test_bitvector_parse():
+    from pysmt.theories import bitvectors
+    type_ = bitvectors.BitVec(32)
+    assert type_.parse_value('#b01000000000000000000000000000000') == 2**30
+    assert type_.parse_value('#b00000000000000000000000000000000') == 0
+    assert type_.parse_value('#b10000000000000000000000000000001') == -1
+
+
+

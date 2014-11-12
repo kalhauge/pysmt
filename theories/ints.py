@@ -1,10 +1,13 @@
 
 import operator
+import re
 
 from pysmt.expression import BinaryOperator, UnaryOperator, Operator, Type
 
 class Int(Type):
     
+    re_number = re.compile('(\(- (?P<minus>[0-9]+)\))|(?P<plus>[0-9]+)')
+
     def __new__(cls):
         if not hasattr(cls, '_instance'):
             cls._instance = super().__new__(cls)
@@ -15,6 +18,11 @@ class Int(Type):
 
     def present_smt2(self, value):
         return str(value)
+    
+    def parse_value(self, value):
+        d = self.re_number.match(value).groupdict()
+        value = -int(d['minus']) if d['minus'] else int(d['plus'])
+        return value
 
 def pairwise(iterable):
     a, b = tee(iterable)

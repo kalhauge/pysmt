@@ -49,7 +49,6 @@ class SMT2Solver (Solver):
             \) \s*)*
         \)
     ''', re.VERBOSE | re.MULTILINE)
-    re_number = re.compile('(\(- (?P<minus>[0-9]+)\))|(?P<plus>[0-9]+)')
     
     def __init__(self, logic="QF_IDL"):
         self.logic = logic 
@@ -117,23 +116,21 @@ class SMT2Solver (Solver):
 
     def get_solution(self, symbols):
         if not symbols: return {}
+        symbols_by_name = {s.name: s for s in symbols}
         self.send([
             '(get-value ({}))'.format(
                 ' '.join(literal.name for literal in symbols)
         )])
         output = self.recv(self.re_solution)
-        mapping = {}
+        solution = {}
         for match in self.re_function.finditer(output):
             value, name = match.group('value', 'name')
             if name == 'error':
                 raise Exception(value)
-            d = self.re_number.match(value).groupdict()
-            value = -int(d['minus']) if d['minus'] else int(d['plus'])
-            mapping[match.group('name')] = value
-
-        solution = {}
-        for literal in symbols:
-            solution[literal.value] = mapping[literal.name]
+            symbol = symbols_by_name[name]
+            if value.endswith(')') and not value.startswith('('):
+               value = value[:-1]
+            solution[symbol.value] = symbol.type_.parse_value(value)
 
         return solution
 
