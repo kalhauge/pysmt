@@ -17,7 +17,7 @@ import time
 import logging 
 log = logging.getLogger('pysmt.solver')
 
-from . import arithmetic
+from .theories import core
 
 DEBUG = True
 
@@ -107,8 +107,8 @@ class SMT2Solver (Solver):
         
     def declare_functions(self, symbols):
         self.send([
-            '(declare-fun {0.name} () {0.type_.smt2})'.format(literal) 
-            for literal in symbols  # sorted(symbols, key=lambda x:x.name)
+            '(declare-fun {0.name} () {0.type_.smt2})'.format(symbol) 
+            for symbol in symbols  # sorted(symbols, key=lambda x:x.name)
         ])
 
     def assert_term(self, term):
