@@ -27,7 +27,6 @@ class BitVec (Type):
         else:
             formating = '0:0{0}x'.format(self.size // 4)
             smt2 = '#x{{{0}}}'.format(formating).format(binval)
-        print(smt2)
         return smt2
 
     def parse_value(self, string):
@@ -40,7 +39,6 @@ class BitVec (Type):
                     binary_string
             ))
         a = int(binary_string, 2)
-        print(a)
         if string[2] == '1':
             return -1 - (a ^ ( 2**self.size -1 ))
         else:
