@@ -1,5 +1,5 @@
 """
-This files contains the bitvektor system of smt
+This files contains the bitvector system of smt
 """
 import operator
 
@@ -30,7 +30,7 @@ class BitVec (Type):
 
     def parse_value(self, string):
         return (-1 if int(string[2]) == 1 else 1) * int(string[3:], 2)
-        
+
 
 class Concat (BinaryOperator):
     smt2_opr = 'concat'
