@@ -133,12 +133,27 @@ def _test_evaluation_tree_reduce(tree, tree_name):
     ).get(tree_name)
 
 
-def test_bitvector_parse():
+
+@pytest.fixture(params=[
+    ('#b00000', 0),
+    ('#b10000', -16),
+    ('#b00001', 1),
+    ('#b11110', -2),
+    ('#b10110', -10),
+    ('#b00101', 5),
+    ]
+)
+def bin5(request):
+    return request.param
+
+def test_bitvector_parse(bin5):
     from pysmt.theories import bitvectors
-    type_ = bitvectors.BitVec(32)
-    assert type_.parse_value('#b01000000000000000000000000000000') == 2**30
-    assert type_.parse_value('#b00000000000000000000000000000000') == 0
-    assert type_.parse_value('#b10000000000000000000000000000001') == -1
+    type_ = bitvectors.BitVec(5)
+    s, v = bin5
+    assert type_.parse_value(s) == v
 
-
-
+def test_bitvector_present_smt2(bin5):
+    from pysmt.theories import bitvectors
+    type_ = bitvectors.BitVec(5)
+    s, v = bin5
+    assert type_.present_smt2(v) == s

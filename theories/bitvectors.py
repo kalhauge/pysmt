@@ -20,16 +20,31 @@ class BitVec (Type):
         return "(_ BitVec {})".format(self.size)
 
     def present_smt2(self, value):
-        absvalue = abs(value) + (2**31 if value < 0 else 0) 
+        binval = value & ( 2**self.size -1 )
         if self.size % 4 != 0:
-            formating = ':0{0}b'.format(self.size -1)
-            return '#b{{{0}}}'.format(formating).format(absvalue)
+            formating = ':0{0}b'.format(self.size)
+            smt2 = '#b{{{0}}}'.format(formating).format(binval)
         else:
             formating = '0:0{0}x'.format(self.size // 4)
-            return '#x{{{0}}}'.format(formating).format(absvalue)
+            smt2 = '#x{{{0}}}'.format(formating).format(binval)
+        print(smt2)
+        return smt2
 
     def parse_value(self, string):
-        return (-1 if int(string[2]) == 1 else 1) * int(string[3:], 2)
+        binary_string = string[2:]
+        if len(binary_string) != self.size:
+            raise ValueError(
+                'Bad length of binary string {} != {} {!r}'.format(
+                    len(binary_string),
+                    self.size,
+                    binary_string
+            ))
+        a = int(binary_string, 2)
+        print(a)
+        if string[2] == '1':
+            return -1 - (a ^ ( 2**self.size -1 ))
+        else:
+            return a
 
 
 class Concat (BinaryOperator):
