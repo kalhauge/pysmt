@@ -58,13 +58,16 @@ class Add (BinaryOperator):
     smt2_opr='bvadd'
 
 class Sub (BinaryOperator):
-    smt2_opr='bvadd'
+    smt2_opr='bvsub'
 
 class Mul (BinaryOperator):
     smt2_opr='bvmul'
 
 class Udiv (BinaryOperator):
     smt2_opr='bvudiv'
+
+class Sdiv (BinaryOperator):
+    smt2_opr='bvsdiv'
 
 class Rem (BinaryOperator):
     smt2_opr='bvrem'

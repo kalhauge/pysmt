@@ -218,7 +218,7 @@ class Symbol(Expression):
         try:
             return inputs[self.name]
         except KeyError:
-            return value
+            return self.value
 
     def compile_smt2(self, depth):
         return self.name
