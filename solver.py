@@ -19,7 +19,7 @@ log = logging.getLogger('pysmt.solver')
 
 from .theories import core
 
-DEBUG = True
+DEBUG = False
 
 class UnsatisfiableTerm (Exception): pass
 
