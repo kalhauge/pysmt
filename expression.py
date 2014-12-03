@@ -47,9 +47,9 @@ class Expression:
     def eval(self, inputs={}):
         """ Evaluates the expression """
     
-    @abstractmethod
     def simplify(self):
         """ Tries to reduce the expression """
+        return self
 
     smt2 = property(lambda self: self.present())
 
@@ -101,7 +101,7 @@ class Operator(Expression):
     next_name = 0
 
     @classmethod
-    def uniq(cls, args):
+    def uniq(cls, *args):
         t = (cls, ) + args
         if not t in cls.ALL_OPR:
             cls.ALL_OPR[t] = cls(
@@ -126,7 +126,7 @@ class Operator(Expression):
     def from_values(cls, *args):
         """ Method that indicates that free values might exist """ 
         args = tuple(map(from_value, args))
-        return cls.uniq(args)
+        return cls.uniq(*args)
     
     def declare(self):
         return '(declare-fun {0.name} () {0.type_.smt2})'.format(self) 

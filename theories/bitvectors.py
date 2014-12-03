@@ -50,11 +50,11 @@ class BitVecOperator:
 
     @classmethod
     def calculate_type(cls, args):
-        assert all(a.type_ == b.type_ for a, b in pairwise(args, args))
+        assert all(a.type_ == b.type_ for a, b in pairwise(args))
         return args[0].type_
 
 class Concat (BitVecOperator, BinaryOperator):
-    smt2_opr = 'concat'
+    smt2_opr='concat'
 
 class And (BitVecOperator, BinaryOperator):
     smt2_opr='bvand'

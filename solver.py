@@ -168,7 +168,6 @@ class SMT2SolverClient(SolverClient):
             decls.append(sym.declare())
 
         msg = decls + defs
-        print(term)
         msg.append('(assert {})'.format(term.name))
         self.symbols |= symbols
         self.send(msg)
