@@ -193,8 +193,15 @@ class InteractiveSMT2Solver (SMT2Solver):
              
         match = self.readbuffer[self.index:]
         self.index = len(self.readbuffer) ## match.end(0)
-        search = re.search(match).group(0)
-        return search
+        try:
+            search = re.search(match).group(0)
+            return search
+        except AttributeError:
+            raise ValueError(
+                ("Could not find {!r} in {!r}, somthing went worng with the "
+                "execution consider inspecting, and running {} manualy ")
+                .format(re, match, self.tempfile)
+            )
 
     def open(self):
         self.index = 0
