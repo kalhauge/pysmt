@@ -1,7 +1,7 @@
 
 import operator
 
-from pysmt.expression import Expression, Operator, BinaryOperator, UnaryOperator, Type
+from pysmt.expression import Operator, BinaryOperator, UnaryOperator, Type
 
 class Bool(Type):
     
@@ -16,15 +16,44 @@ class Bool(Type):
     def present_smt2(self, value): 
         return 'true' if value else 'false'
 
-class And(Operator):
+class BoolOperator:
+    class_type = Bool()
+
+class And(BoolOperator, Operator):
     opr = all
     smt2_opr = 'and'
 
-class Or(Operator):
+    def simplify(self):
+        newargs = []
+        for arg in self.args:
+            newarg = arg.simplify()
+            if isinstance(newarg, And):
+                total.extend(newarg.args)
+            elif isinstance(newarg, Value) and not newarg.value:
+                return newarg.value
+            else:
+                newargs.append(newarg)
+        if newargs != self.args:
+            return And(*total)
+
+class Or(BoolOperator, Operator):
     opr = any
     smt2_opr = 'or'
 
-class Not(UnaryOperator):
+    def simplify(self):
+        newargs = []
+        for arg in self.args:
+            newarg = arg.simplify()
+            if isinstance(newarg, Or):
+                total.extend(newarg.args)
+            elif isinstance(newarg, Value) and newarg.value:
+                return newarg.value
+            else:
+                newargs.append(newarg)
+        if newargs != self.args:
+            return Or(*total)
+
+class Not(BoolOperator, UnaryOperator):
     opr = operator.not_
     smt2_opr = 'not'
 

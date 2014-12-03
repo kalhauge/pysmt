@@ -1,8 +1,9 @@
-
 import operator
 import re
 
 from pysmt.expression import BinaryOperator, UnaryOperator, Operator, Type
+from pysmt.theories.core import BoolOperator
+from pysmt.utils import pairwise
 
 class Int(Type):
     
@@ -24,55 +25,53 @@ class Int(Type):
         value = -int(d['minus']) if d['minus'] else int(d['plus'])
         return value
 
-def pairwise(iterable):
-    a, b = tee(iterable)
-    next(b, None)
-    return zip(a, b)
+class IntOperator:
+    class_type = Int()
 
-class Order(Operator):
-    opr = lambda *args: all(a < b for a, b in pairwise(args))
-    smt2_opr = '<'
-
-class Add(BinaryOperator):
+class Add(IntOperator, BinaryOperator):
     """ Adds the first and the second value """
     opr = operator.add
     smt2_opr = '+'
 
-class Sub(BinaryOperator):
+class Sub(IntOperator, BinaryOperator):
     """ Substracts the first and the second value """
     opr = operator.sub
     smt2_opr = '-'
          
-class Mul(BinaryOperator):
+class Mul(IntOperator, BinaryOperator):
     """ Multiplies the first and the second value """
     opr = operator.mul
     smt2_opr = '*'
 
-class Div(BinaryOperator):
+class Div(IntOperator, BinaryOperator):
     opr = operator.floordiv
     smt2_opr = 'div'
 
-class Mod(BinaryOperator):
+class Mod(IntOperator, BinaryOperator):
     opr = operator.mod
     smt2_opr = 'mod'
 
-class Eq(BinaryOperator):
+class Order(BoolOperator, Operator):
+    opr = lambda *args: all(a < b for a, b in pairwise(args))
+    smt2_opr = '<'
+
+class Eq(BoolOperator, BinaryOperator):
     opr = operator.eq
     smt2_opr = '='
 
-class Ge(BinaryOperator):
+class Ge(BoolOperator, BinaryOperator):
     opr = operator.ge
     smt2_opr = '>='
 
-class Le(BinaryOperator):
+class Le(BoolOperator, BinaryOperator):
     opr = operator.le
     smt2_opr = '<='
 
-class Gt(BinaryOperator):
+class Gt(BoolOperator, BinaryOperator):
     opr = operator.gt
     smt2_opr = '>'
 
-class Lt(BinaryOperator):
+class Lt(BoolOperator, BinaryOperator):
     opr = operator.lt
     smt2_opr = '<'
 

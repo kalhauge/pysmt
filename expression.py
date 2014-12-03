@@ -4,15 +4,6 @@ Contains expressions and type bases
 
 from abc import abstractmethod
 
-def transverse(root):
-    stack = [root]
-    while stack:
-        top = stack.pop()
-        try: stack.extend(top.attributes())
-        except AttributeError: pass
-        yield top 
-
-
 def from_value(value):
     if isinstance(value, Expression):
         return value
@@ -21,7 +12,6 @@ def from_value(value):
         return Symbol.from_value(ints.Int(), value)
     else:
         return Value.from_value(value)
-
 
 class Type:
 
@@ -43,123 +33,151 @@ class Type:
     def get_value(self, value):
         return Value(self, value)
 
+    def __repr__(self):
+        return "<pysmt.Type: {}>".format(self.smt2)
+
 class Expression:
     """ A piece of artihmetic, can return anything. """
 
+    def __init__(self, name, type_):
+        self.name = name
+        self.type_ = type_
+    
+    @abstractmethod
+    def eval(self, inputs={}):
+        """ Evaluates the expression """
+    
+    @abstractmethod
+    def simplify(self):
+        """ Tries to reduce the expression """
+
+    smt2 = property(lambda self: self.present())
+
     def symbols(self):
         """ Returns the symbols used in the expression """
-        symbols = set()
-        for expr in self.subexpressions():
-            if isinstance(expr, Symbol) and not expr in symbols:
-                symbols.add(expr)
-                yield expr
+        return set(expr for expr in self.transverse() 
+            if isinstance(expr, Symbol))
+    
+    def operators(self):
+        """ Returns the symbols used in the expression """
+        return set(expr for expr in self.transverse() 
+            if isinstance(expr, Operator))
 
     def size(self):
         """ Returns the size of the expression, as in how many nodes in the
         experssion tree """
-        return sum(1 for x in self.subexpressions())
+        return sum(1 for x in self.transverse())
 
-    @abstractmethod
-    def eval(self, inputs={}):
-        """ Evaluates the expression """
-
-    def iter_all(self):
-        """ Iteratest though the entier tree in the samme order each time, in a
-        depbth first mannor, only yielding all nodes and leafs """
-        yield from transverse(self)
-
-    def attributes(self):
-        vs = vars(self)
-        return (vs[x] for x in sorted(vs) if x[0] != '_')
-
-    def subexpressions(self):
-        yield from filter(lambda a: isinstance(a, Expression), self.iter_all())
-    
-    def subcontent(self):
-        yield from filter(lambda a: not isinstance(a, Expression), self.iter_all())
+    def transverse(self):
+        stack = [self]
+        while stack:
+            top = stack.pop()
+            stack.extend(top.subexpressions)
+            yield top 
 
     def __eq__(self, other):
-        return (
-            isinstance(other, Expression) and
-            hash(self) == hash(other) and
-            all(a == b for a, b in zip(self.subcontent(), other.subcontent()))
-        )
+        try:
+            return ( 
+                self.name == other.name and 
+                self.type_ == other.type_
+            )
+        except AttributeError:
+            return False
 
-    def simplify(self):
-        return self
+    def __hash__(self):
+        return hash(self.name)
+
 
 class Operator(Expression):
-    """ An operator could be anything from a function, to a unaryoperater like
-    not"""
+    """ 
+    An operator could be anything from a function, to a unaryoperater like not
+    
+    All alike expressions have the same name, and can be compared on their name
+    alone
+    """
 
-    def __init__(self, *args):
+    ALL_OPR = {}
+    
+    next_name = 0
+
+    @classmethod
+    def uniq(cls, args):
+        t = (cls, ) + args
+        if not t in cls.ALL_OPR:
+            cls.ALL_OPR[t] = cls(
+                "expr_{}".format(Operator.next_name), 
+                *args
+            )
+            Operator.next_name += 1
+        return cls.ALL_OPR[t]
+
+    def __init__(self, name, *args):
+        assert isinstance(name, str)
+        super().__init__(name, self.calculate_type(args))
         self._args = tuple(args)
-        self._hash = hash(args)
+    
+    subexpressions = property(lambda self: self._args)
+
+    @classmethod
+    def calculate_type(cls, args):
+        return cls.class_type 
+    
+    @classmethod
+    def from_values(cls, *args):
+        """ Method that indicates that free values might exist """ 
+        args = tuple(map(from_value, args))
+        return cls.uniq(args)
+    
+    def declare(self):
+        return '(declare-fun {0.name} () {0.type_.smt2})'.format(self) 
+
+    def define(self):
+        return '(assert (= {0.name} {0.smt2}))'.format(self)
 
     @property
     def args(self):
         return self._args
 
-    def attributes(self):
-        yield from super().attributes()
-        yield from self._args 
-
     def eval(self, inputs={}):
         return self.opr(*[arg.eval(inputs) for arg in self.args])
 
-    @classmethod
-    def from_values(cls, *args):
-        """ Method that indicates that free values might exist """ 
-        return cls(*list(map(from_value, args)))
-
-    def compile_smt2(self, depth=0):
-        sep = ' '
-        if len(self.args) > 2: sep = '\n' + ' '*(4*(depth + 1))
-        
-        return '({}{})'.format(
-            self.smt2_opr, 
-            sep + sep.join(t.compile_smt2(depth + 1) for t in self.args)
+    @property
+    def smt2(self):
+        return '({} {})'.format(
+            self.smt2_opr, ' '.join(t.name for t in self.args)
         )
 
     def __str__(self):
         return '({} {})'.format(
             self.smt2_opr, ' '.join(str(a) for a in self.args)
         )
-    
+
     def __repr__(self):
         return '<{}.{} {}>'.format(self.__module__, self.__class__.__name__, self._args)
     
-    def __hash__(self):
-        return self._hash
-
 
 class BinaryOperator(Operator):
     """ A binary operator """
     
-    def __init__(self, first, second):
-        super().__init__(first, second)
+    def __init__(self, name, first, second):
+        super().__init__(name, first, second)
 
-    @property
-    def first(self):
-        return self.args[0]
-
-    @property
-    def second(self):
-        return self.args[1]
+    first = property(lambda self: self.args[0])
+    second = property(lambda self: self.args[0])
 
 class UnaryOperator(Operator):
 
-    def __init__(self, value):
-        super().__init__(value)
+    def __init__(self, name, value):
+        super().__init__(name, value)
 
-    @property
-    def value(self):
-        return self.args[0]
+    value = property(lambda self: self.args[0])
 
 class Value(Expression):
 
+    subexpressions = []
+
     def __init__(self, type_, value):
-        self.type_ = type_
+        super().__init__(type_.present_smt2(value), type_)
         self.value = value
 
     @classmethod 
@@ -173,16 +191,9 @@ class Value(Expression):
 
     def eval(self, inputs={}):
         return self.value
-    
-    def compile_smt2(self, depth=0):
-        return self.type_.present_smt2(self.value)
-
+   
     def __str__(self):
-        return self.compile_smt2() 
-
-    def __hash__(self):
-        return hash((self.type_, self.value))
-
+        return self.name
 
 class Symbol(Expression):
     """
@@ -195,10 +206,10 @@ class Symbol(Expression):
     :param value: The value that is symbol is associated with. This is
         used for traceability.
     """
+    subexpressions = []
 
     def __init__(self, name, type_, value):
-        self.name = name
-        self.type_ = type_
+        super().__init__(name, type_)
         self.value = value
 
     @classmethod
@@ -215,19 +226,12 @@ class Symbol(Expression):
             return cls('s' + str(hash(value)), type_, value)
 
     def eval(self, inputs={}):
-        try:
-            return inputs[self.name]
+        try: return inputs[self.name]
         except KeyError:
             return self.value
 
-    def compile_smt2(self, depth):
-        return self.name
-
-    def __eq__(self, other):
-        return hasattr(other, 'name') and self.name == other.name
-
-    def __hash__(self):
-        return hash(self.name)
+    def declare(self):
+        return '(declare-fun {0.name} () {0.type_.smt2})'.format(self) 
 
     def __str__(self):
         return self.name

@@ -42,7 +42,7 @@ def test_yices_statifiable():
     )
 
     assert set( test for sat, test in 
-        zip(solver.satisfiable(context, tests), other) if sat
+        zip(solver.satisfiable(tests, context), other) if sat
     ) == set(pysmt.order(a, b) for a, b in [
         (t1, t3),
         (t2, t3),
@@ -131,8 +131,6 @@ def _test_evaluation_tree_reduce(tree, tree_name):
             C.Symbol(2, -10), 
         ),
     ).get(tree_name)
-
-
 
 @pytest.fixture(params=[
     ('#b00000', 0),

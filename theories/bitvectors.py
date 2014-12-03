@@ -4,6 +4,8 @@ This files contains the bitvector system of smt
 import operator
 
 from pysmt.expression import Expression, Operator, BinaryOperator, UnaryOperator, Type
+from pysmt.theories.core import BoolOperator
+from pysmt.utils import pairwise
 
 class BitVec (Type):
     
@@ -44,66 +46,67 @@ class BitVec (Type):
         else:
             return a
 
+class BitVecOperator:
 
-class Concat (BinaryOperator):
+    @classmethod
+    def calculate_type(cls, args):
+        assert all(a.type_ == b.type_ for a, b in pairwise(args, args))
+        return args[0].type_
+
+class Concat (BitVecOperator, BinaryOperator):
     smt2_opr = 'concat'
 
-class And (BinaryOperator):
+class And (BitVecOperator, BinaryOperator):
     smt2_opr='bvand'
 
-class Or (BinaryOperator):
+class Or (BitVecOperator, BinaryOperator):
     smt2_opr='bvor'
 
-class Add (BinaryOperator):
+class Add (BitVecOperator, BinaryOperator):
     smt2_opr='bvadd'
 
-class Sub (BinaryOperator):
+class Sub (BitVecOperator, BinaryOperator):
     smt2_opr='bvsub'
 
-class Mul (BinaryOperator):
+class Mul (BitVecOperator, BinaryOperator):
     smt2_opr='bvmul'
 
-class Udiv (BinaryOperator):
+class Udiv (BitVecOperator, BinaryOperator):
     smt2_opr='bvudiv'
 
-class Sdiv (BinaryOperator):
+class Sdiv (BitVecOperator, BinaryOperator):
     smt2_opr='bvsdiv'
 
-class Rem (BinaryOperator):
+class Rem (BitVecOperator, BinaryOperator):
     smt2_opr='bvrem'
 
-class Shl (BinaryOperator):
+class Shl (BitVecOperator, BinaryOperator):
     opr = operator.lshift 
     smt2_opr='bvshl'
 
-class Lshr (BinaryOperator):
+class Lshr (BitVecOperator, BinaryOperator):
     opr = operator.rshift 
     smt2_opr='bvlshr'
 
-class Slt (BinaryOperator):
+class Slt (BoolOperator, BinaryOperator):
     smt2_opr='bvslt'
 
-class Sle (BinaryOperator):
+class Sle (BoolOperator, BinaryOperator):
     smt2_opr='bvsle'
 
-class Sgt (BinaryOperator):
+class Sgt (BoolOperator, BinaryOperator):
     smt2_opr='bvsgt'
 
-class Sge (BinaryOperator):
+class Sge (BoolOperator, BinaryOperator):
     smt2_opr='bvsge'
 
-class Not (UnaryOperator):
+class Not (BitVecOperator, UnaryOperator):
     smt2_opr = 'bvnot'
 
-class Neg (UnaryOperator):
+class Neg (BitVecOperator, UnaryOperator):
     smt2_opr = 'bvneg'
 
-class Eq (BinaryOperator):
+class Eq (BoolOperator, BinaryOperator):
     opr = operator.eq
     smt2_opr = '='
-
-def test_present():
-    bv = BitVec(8)
-    assert bv.present(6) == '#x6'
-
 

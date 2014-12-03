@@ -27,14 +27,14 @@ def all(terms):
     return {
         0 : lambda *x: true,
         1 : lambda *x: ts[0]
-    }.get(len(ts), core.And)(*ts)
+    }.get(len(ts), core.And.from_values)(*ts)
 
 def any(terms):
     ts = list(terms)
     return {
         0 : lambda *x: false,
         1 : lambda *x: ts[0]
-    }.get(len(ts), core.Or)(*ts)
+    }.get(len(ts), core.Or.from_values)(*ts)
 
 order = ints.Order.from_values
 
