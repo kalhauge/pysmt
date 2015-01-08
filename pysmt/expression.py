@@ -13,7 +13,7 @@ def from_value(value):
     else:
         return Value.from_value(value)
 
-class Type:
+class Type (object) :
 
     @abstractmethod
     def compile_smt2(self):
@@ -36,7 +36,7 @@ class Type:
     def __repr__(self):
         return "<pysmt.Type: {}>".format(self.smt2)
 
-class Expression:
+class Expression (object):
     """ A piece of artihmetic, can return anything. """
 
     def __init__(self, name, type_):
@@ -113,7 +113,7 @@ class Operator(Expression):
 
     def __init__(self, name, *args):
         assert isinstance(name, str)
-        super(Expression, self).__init__(name, self.calculate_type(args))
+        super(Operator, self).__init__(name, self.calculate_type(args))
         self._args = tuple(args)
     
     subexpressions = property(lambda self: self._args)
@@ -160,7 +160,7 @@ class BinaryOperator(Operator):
     """ A binary operator """
     
     def __init__(self, name, first, second):
-        super(Operator, self).__init__(name, first, second)
+        super(BinaryOperator, self).__init__(name, first, second)
 
     first = property(lambda self: self.args[0])
     second = property(lambda self: self.args[0])
@@ -168,7 +168,7 @@ class BinaryOperator(Operator):
 class UnaryOperator(Operator):
 
     def __init__(self, name, value):
-        super(Operator, self).__init__(name, value)
+        super(UnaryOperator, self).__init__(name, value)
 
     value = property(lambda self: self.args[0])
 
@@ -177,7 +177,7 @@ class Value(Expression):
     subexpressions = []
 
     def __init__(self, type_, value):
-        super(Operator, self).__init__(type_.present_smt2(value), type_)
+        super(Value, self).__init__(type_.present_smt2(value), type_)
         self.value = value
 
     @classmethod 
@@ -209,7 +209,7 @@ class Symbol(Expression):
     subexpressions = []
 
     def __init__(self, name, type_, value):
-        super(Operator, self).__init__(name, type_)
+        super(Symbol, self).__init__(name, type_)
         self.value = value
 
     @classmethod
