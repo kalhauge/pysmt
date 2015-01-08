@@ -1,4 +1,3 @@
-#!python
 
 from setuptools import setup, find_packages
 from setuptools.command.test import test as TestCommand
@@ -17,7 +16,7 @@ class PyTest(TestCommand):
         sys.exit(errcode)
 
 setup(
-    name="smt", 
+    name="pysmt",
     version=pysmt.__version__,
     license='MIT',
     packages=['pysmt', 'pysmt.theories'],
