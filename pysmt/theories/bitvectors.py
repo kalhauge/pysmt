@@ -7,6 +7,10 @@ from pysmt.expression import Expression, Operator, BinaryOperator, UnaryOperator
 from pysmt.theories.core import BoolOperator
 from pysmt.utils import pairwise
 
+def grouper(iterable, n, fillvalue=None):
+    args = [iter(iterable)] * n
+    return zip_longest(*args, fillvalue=fillvalue)
+
 class BitVec (Type):
     
     def __new__(cls, size):
@@ -22,13 +26,14 @@ class BitVec (Type):
         return "(_ BitVec {})".format(self.size)
 
     def present_smt2(self, value):
-        binval = value & ( 2**self.size -1 )
-        if self.size % 4 != 0:
-            formating = ':0{0}b'.format(self.size)
-            smt2 = '#b{{{0}}}'.format(formating).format(binval)
-        else:
-            formating = '0:0{0}x'.format(self.size // 4)
-            smt2 = '#x{{{0}}}'.format(formating).format(binval)
+        smt2 = "#x" + hexlify(self.data).decode('ascii') 
+#        binval = value & ( 2**self.size -1 )
+#        if self.size % 4 != 0:
+#            formating = ':0{0}b'.format(self.size)
+#            smt2 = '#b{{{0}}}'.format(formating).format(binval)
+#        else:
+#            formating = '0:0{0}x'.format(self.size // 4)
+#            smt2 = '#x{{{0}}}'.format(formating).format(binval)
         return smt2
 
     def parse_value(self, string):
@@ -40,11 +45,8 @@ class BitVec (Type):
                     self.size,
                     binary_string
             ))
-        a = int(binary_string, 2)
-        if string[2] == '1':
-            return -1 - (a ^ ( 2**self.size -1 ))
-        else:
-            return a
+        a = bytes([int(byte , 2) for byte in grouper(binary_string, 8)])
+        return a
 
 class BitVecOperator:
 
