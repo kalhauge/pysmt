@@ -17,19 +17,19 @@ class PyTest(TestCommand):
         sys.exit(errcode)
 
 setup(
-    name="pysmt", 
+    name="smt", 
     version=pysmt.__version__,
     license='MIT',
     packages=['pysmt', 'pysmt.theories'],
     cmdclass={'test': PyTest},
     classifiers = [
         'Programming Language :: Python',
-        'Development Status :: 3 - Alpha',
+        'Development Status :: 2 - Pre-Alpha',
         'Natural Language :: English',
         'Operating System :: OS Independent',
     ],
     platforms="any",
-    description="A SMT2 solver and modifier",
+    description="A SMT solver and modifier",
     long_description = open('README').read(),
     extras_require={
         'testing': ['pytest'],
