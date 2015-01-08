@@ -1,7 +1,8 @@
-
 from .theories import ints, core
 from .solver import *
 from .expression import *
+
+__version__ = "0.1.0"
 
 not_ = lambda x: core.Not.from_values(x).simplify()
 

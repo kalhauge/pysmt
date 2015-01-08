@@ -113,7 +113,7 @@ class Operator(Expression):
 
     def __init__(self, name, *args):
         assert isinstance(name, str)
-        super().__init__(name, self.calculate_type(args))
+        super(Expression, self).__init__(name, self.calculate_type(args))
         self._args = tuple(args)
     
     subexpressions = property(lambda self: self._args)
@@ -160,7 +160,7 @@ class BinaryOperator(Operator):
     """ A binary operator """
     
     def __init__(self, name, first, second):
-        super().__init__(name, first, second)
+        super(Operator, self).__init__(name, first, second)
 
     first = property(lambda self: self.args[0])
     second = property(lambda self: self.args[0])
@@ -168,7 +168,7 @@ class BinaryOperator(Operator):
 class UnaryOperator(Operator):
 
     def __init__(self, name, value):
-        super().__init__(name, value)
+        super(Operator, self).__init__(name, value)
 
     value = property(lambda self: self.args[0])
 
@@ -177,7 +177,7 @@ class Value(Expression):
     subexpressions = []
 
     def __init__(self, type_, value):
-        super().__init__(type_.present_smt2(value), type_)
+        super(Operator, self).__init__(type_.present_smt2(value), type_)
         self.value = value
 
     @classmethod 
@@ -209,7 +209,7 @@ class Symbol(Expression):
     subexpressions = []
 
     def __init__(self, name, type_, value):
-        super().__init__(name, type_)
+        super(Operator, self).__init__(name, type_)
         self.value = value
 
     @classmethod

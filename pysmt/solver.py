@@ -8,10 +8,12 @@ Solver
 
 
 """
+from __future__ import print_function
+
 from abc import abstractmethod
-import re
 from subprocess import Popen, PIPE, STDOUT
 import itertools
+import re
 import time
 
 import logging 
@@ -19,7 +21,7 @@ log = logging.getLogger('pysmt.solver')
 
 from .theories import core
 
-DEBUG = False
+DEBUG=False
 
 class UnsatisfiableTerm (Exception): pass
 
