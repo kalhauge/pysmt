@@ -3,6 +3,8 @@ This files contains the bitvector system of smt
 """
 import operator
 
+from binascii import hexlify
+from itertools import zip_longest
 from pysmt.expression import Expression, Operator, BinaryOperator, UnaryOperator, Type
 from pysmt.theories.core import BoolOperator
 from pysmt.utils import pairwise
@@ -26,7 +28,7 @@ class BitVec (Type):
         return "(_ BitVec {})".format(self.size)
 
     def present_smt2(self, value):
-        smt2 = "#x" + hexlify(self.data).decode('ascii') 
+        smt2 = "#x" + hexlify(value).decode('ascii') 
 #        binval = value & ( 2**self.size -1 )
 #        if self.size % 4 != 0:
 #            formating = ':0{0}b'.format(self.size)
@@ -45,7 +47,7 @@ class BitVec (Type):
                     self.size,
                     binary_string
             ))
-        a = bytes([int(byte , 2) for byte in grouper(binary_string, 8)])
+        a = bytes([int(binary_string[i*8:(i+1)*8], 2) for i in range(self.size//8)])
         return a
 
 class BitVecOperator:
